@@ -28,7 +28,7 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
   const [statusString, setStatusString] = useState(spreadSheetClient.getEditStatusString());
   const [currentCell, setCurrentCell] = useState(spreadSheetClient.getWorkingCellLabel());
   const [currentlyEditing, setCurrentlyEditing] = useState(spreadSheetClient.getEditStatus());
-  const [userName, setUserName] = useState(window.sessionStorage.getItem('userName') || "");
+  const [userName, setUserName] = useState(window.sessionStorage.getItem('userName') || "Unknown");
 
 
   function updateDisplayValues(): void {
@@ -83,10 +83,10 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
    */
   async function onCommandButtonClick(text: string): Promise<void> {
     // Check if the user has entered a name before performing actions
-    if (!userName) {
-      alert("Please enter your name!");
-      return; 
-    }
+    if (spreadSheetClient.userName === "" || spreadSheetClient.userName === "Unknown") {
+      window.alert('Please enter your name!');
+      return;
+      }
 
     switch (text) {
       case ButtonNames.edit_toggle:
@@ -121,10 +121,10 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
    * */
   function onButtonClick(event: React.MouseEvent<HTMLButtonElement>): void {
     // Check if the user has entered a name before performing actions
-    if (!userName) {
-      alert("Please enter your name!");
+    if (spreadSheetClient.userName === "" || spreadSheetClient.userName === "Unknown") {
+      window.alert('Please enter your name!');
       return;
-    }
+      }
 
     const text = event.currentTarget.textContent;
     let trueText = text ? text : "";
@@ -146,10 +146,10 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
    */
   function onCellClick(event: React.MouseEvent<HTMLButtonElement>): void {
     // Check if the user has entered a name before performing actions
-    if (!userName) {
-      alert("Please enter your name!");
+    if (spreadSheetClient.userName === "" || spreadSheetClient.userName === "Unknown") {
+      window.alert('Please enter your name!');
       return;
-    }
+      }
 
     const cellLabel = event.currentTarget.getAttribute("cell-label");
     // calculate the current row and column of the clicked on cell
