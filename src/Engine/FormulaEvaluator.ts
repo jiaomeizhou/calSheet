@@ -1,6 +1,7 @@
 import Cell from "./Cell"
 import SheetMemory from "./SheetMemory"
 import { ErrorMessages } from "./GlobalDefinitions";
+import { IndentStyle } from "typescript";
 
 
 
@@ -18,7 +19,7 @@ export class FormulaEvaluator {
     this._sheetMemory = memory;
   }
 
-  /**
+  /**w
     * place holder for the evaluator.   I am not sure what the type of the formula is yet 
     * I do know that there will be a list of tokens so i will return the length of the array
     * 
@@ -44,41 +45,122 @@ export class FormulaEvaluator {
    */
 
   evaluate(formula: FormulaType) {
-
-
-    // set the this._result to the length of the formula
-
-    this._result = formula.length;
-    this._errorMessage = "";
-
-    switch (formula.length) {
-      case 0:
+    try {
+      if (formula.length === 0) {
+        this._result = 0;
         this._errorMessage = ErrorMessages.emptyFormula;
-        break;
-      case 7:
-        this._errorMessage = ErrorMessages.partial;
-        break;
-      case 8:
-        this._errorMessage = ErrorMessages.divideByZero;
-        break;
-      case 9:
-        this._errorMessage = ErrorMessages.invalidCell;
-        break;
-      case 10:
+        return; // Exit the method to prevent further execution
+      }
+
+      if (formula.length === 2 && !this.isNumber(formula[-1]) && this.isNumber(formula[0]))  {
+        this._result = Number(formula[0]);
         this._errorMessage = ErrorMessages.invalidFormula;
+        return;
+      }
+
+      const result = this.evaluateTokens(formula);
+      this._result = result;
+      
+    } catch (error) {   // If an error occurs, return the error message
+      if (error instanceof Error) {
+        this._errorMessage = error.message;
+        this._result = error.message === ErrorMessages.divideByZero ? Infinity : 0;
+      }
+    }
+  }
+
+  private evaluateTokens(tokens: FormulaType): number {
+
+    const numStack: number[] = [];
+    const operators: string[] = [];
+
+    for (const token of tokens) {
+      if (this.isNumber(token)) {
+        numStack.push(Number(token));
+      } else if (this.isCellReference(token)) {
+        const [value, error] = this.getCellValue(token);
+        if (error !== "") {
+          throw new Error(error);
+        }
+        numStack.push(value);
+      } else if (this.isOperator(token)) {
+        while (
+          operators.length > 0 &&
+          this.hasHigherPrecedence(operators[operators.length - 1], token)
+        ) {
+          this.applyOperator(numStack, operators.pop() as string);
+        }
+        operators.push(token);
+      } else if (token === "(") {
+        operators.push(token);
+      } else if (token === ")") {
+        while (operators.length > 0 && operators[operators.length - 1] !== "(") {
+          this.applyOperator(numStack, operators.pop() as string);
+        }
+        if (operators.length === 0 || operators.pop() !== "(") {
+          throw new Error(ErrorMessages.missingParentheses);
+        }
+      }
+    }
+
+    while (operators.length > 0) {
+      const operator = operators.pop() as string;
+      if (operator === "(") {
+        throw new Error(ErrorMessages.missingParentheses);
+      } else if (operator === "/") {
+        const operand2 = numStack.pop() as number;
+        const operand1 = numStack.pop() as number;
+        if (operand2 === 0) {
+          throw new Error(ErrorMessages.divideByZero);
+        }
+        else {
+          const result = operand1 / operand2;
+          numStack.push(result);
+        }
+      }  else {
+        this.applyOperator(numStack, operator);
+      }
+    }
+
+    if (numStack.length !== 1) {
+      throw new Error(ErrorMessages.invalidFormula);
+    }
+
+    return numStack[0];
+  }
+
+  private isOperator(token: TokenType): boolean {
+    return ["+", "-", "*", "/"].includes(token);
+  }
+
+  private hasHigherPrecedence(operator1: string, operator2: string): boolean {
+    const precedence: { [operator: string]: number } = { "+": 1, "-": 1, "*": 2, "/": 2 };
+    return precedence[operator1] >= precedence[operator2];
+  }
+
+  private applyOperator(stack: number[], operator: string): void {
+    if (stack.length < 2) {
+      this._errorMessage = ErrorMessages.invalidFormula;
+      return;
+    }
+    const operand2 = stack.pop() as number;
+    const operand1 = stack.pop() as number;
+
+    switch (operator) {
+      case "+":
+        stack.push(operand1 + operand2);
         break;
-      case 11:
-        this._errorMessage = ErrorMessages.invalidNumber;
+      case "-":
+        stack.push(operand1 - operand2);
         break;
-      case 12:
-        this._errorMessage = ErrorMessages.invalidOperator;
+      case "*":
+        stack.push(operand1 * operand2);
         break;
-      case 13:
-        this._errorMessage = ErrorMessages.missingParentheses;
+      case "/":
+        stack.push(operand1 / operand2);
         break;
       default:
-        this._errorMessage = "";
-        break;
+        throw new Error(ErrorMessages.invalidOperator);
     }
   }
 
