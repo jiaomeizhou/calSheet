@@ -4,7 +4,7 @@
 
 Name: Jiaomei Zhou
 
-GitHub Handle:
+GitHub Handle: jiaomeizhou
 
 - How many hours did it take you to complete this assignment? 10 hours.
 
