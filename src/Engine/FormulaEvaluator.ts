@@ -46,6 +46,7 @@ export class FormulaEvaluator {
 
   evaluate(formula: FormulaType) {
     try {
+      // If the formula is empty, return 0 and the empty formula error message.
       if (formula.length === 0) {
         this._result = 0;
         this._errorMessage = ErrorMessages.emptyFormula;
@@ -58,32 +59,40 @@ export class FormulaEvaluator {
         return;
       }
 
+      // If the formula is not empty, evaluate the tokens and return the result
       const result = this.evaluateTokens(formula);
       this._result = result;
       
     } catch (error) {   // If an error occurs, return the error message
       if (error instanceof Error) {
         this._errorMessage = error.message;
-        this._result = error.message === ErrorMessages.divideByZero ? Infinity : 0;
+        this._result = error.message === ErrorMessages.divideByZero ? Infinity : 0; // If the error is divide by zero, return infinity
       }
     }
   }
 
+  // evaluate the tokens and return the result
   private evaluateTokens(tokens: FormulaType): number {
 
     const numStack: number[] = [];
     const operators: string[] = [];
 
+    // loop through the tokens
     for (const token of tokens) {
+      // if the token is a number, push it to the number stack
       if (this.isNumber(token)) {
         numStack.push(Number(token));
-      } else if (this.isCellReference(token)) {
+      } 
+      // if the token is a cell reference, push the cell value to the number stack
+      else if (this.isCellReference(token)) {
         const [value, error] = this.getCellValue(token);
         if (error !== "") {
           throw new Error(error);
         }
         numStack.push(value);
-      } else if (this.isOperator(token)) {
+      } 
+      // if the token is an operator, apply the operator to the top two numbers in the stack
+      else if (this.isOperator(token)) {
         while (
           operators.length > 0 &&
           this.hasHigherPrecedence(operators[operators.length - 1], token)
@@ -91,12 +100,18 @@ export class FormulaEvaluator {
           this.applyOperator(numStack, operators.pop() as string);
         }
         operators.push(token);
-      } else if (token === "(") {
+      } 
+      // if the token is a left parenthesis, push it to the operator stack
+      else if (token === "(") {
         operators.push(token);
-      } else if (token === ")") {
+      } 
+      // if the token is a right parenthesis, apply the operators until the left parenthesis is found
+      else if (token === ")") {
+        // while the operator stack is not empty and the top of the stack is not a left parenthesis
         while (operators.length > 0 && operators[operators.length - 1] !== "(") {
           this.applyOperator(numStack, operators.pop() as string);
         }
+        // if the operator stack is empty or the top of the stack is not a left parenthesis, throw an error
         if (operators.length === 0 || operators.pop() !== "(") {
           throw new Error(ErrorMessages.missingParentheses);
         }
@@ -107,7 +122,8 @@ export class FormulaEvaluator {
       const operator = operators.pop() as string;
       if (operator === "(") {
         throw new Error(ErrorMessages.missingParentheses);
-      } else if (operator === "/") {
+      } 
+      else if (operator === "/") {
         const operand2 = numStack.pop() as number;
         const operand1 = numStack.pop() as number;
         if (operand2 === 0) {
@@ -117,7 +133,8 @@ export class FormulaEvaluator {
           const result = operand1 / operand2;
           numStack.push(result);
         }
-      }  else {
+      } 
+      else {
         this.applyOperator(numStack, operator);
       }
     }
@@ -126,26 +143,33 @@ export class FormulaEvaluator {
       throw new Error(ErrorMessages.invalidFormula);
     }
 
+    // return the result
     return numStack[0];
   }
 
+  // check if the token is an operator
   private isOperator(token: TokenType): boolean {
     return ["+", "-", "*", "/"].includes(token);
   }
 
+  // check if the operator1 has higher precedence than operator2
   private hasHigherPrecedence(operator1: string, operator2: string): boolean {
     const precedence: { [operator: string]: number } = { "+": 1, "-": 1, "*": 2, "/": 2 };
     return precedence[operator1] >= precedence[operator2];
   }
 
+  // apply the operator to the top two numbers in the stack
   private applyOperator(stack: number[], operator: string): void {
+    // if the stack has less than two numbers, throw an error
     if (stack.length < 2) {
       this._errorMessage = ErrorMessages.invalidFormula;
       return;
     }
+    // pop the top two numbers from the stack
     const operand2 = stack.pop() as number;
     const operand1 = stack.pop() as number;
 
+    // apply the operator to the two numbers and push the result to the stack
     switch (operator) {
       case "+":
         stack.push(operand1 + operand2);
