@@ -45,106 +45,86 @@ export class FormulaEvaluator {
    */
 
   evaluate(formula: FormulaType) {
-    try {
-      // If the formula is empty, return 0 and the empty formula error message.
+    this._result = 0;
+    this._errorMessage = "";
+
+      // If the formula is empty, return "".
       if (formula.length === 0) {
-        this._result = 0;
         this._errorMessage = ErrorMessages.emptyFormula;
         return; // Exit the method to prevent further execution
       }
 
-      if (formula.length === 2 && !this.isNumber(formula[-1]) && this.isNumber(formula[0]))  {
-        this._result = Number(formula[0]);
-        this._errorMessage = ErrorMessages.invalidFormula;
-        return;
-      }
-
       // If the formula is not empty, evaluate the tokens and return the result
-      const result = this.evaluateTokens(formula);
-      this._result = result;
-      
-    } catch (error) {   // If an error occurs, return the error message
-      if (error instanceof Error) {
-        this._errorMessage = error.message;
-        this._result = error.message === ErrorMessages.divideByZero ? Infinity : 0; // If the error is divide by zero, return infinity
-      }
-    }
+      this.evaluateTokens(formula);
   }
 
   // evaluate the tokens and return the result
-  private evaluateTokens(tokens: FormulaType): number {
+  private evaluateTokens(tokens: FormulaType) {
 
-    const numStack: number[] = [];
+    const numbers: number[] = [];
     const operators: string[] = [];
 
     // loop through the tokens
     for (const token of tokens) {
+
       // if the token is a number, push it to the number stack
       if (this.isNumber(token)) {
-        numStack.push(Number(token));
+        numbers.push(Number(token));
       } 
+
       // if the token is a cell reference, push the cell value to the number stack
       else if (this.isCellReference(token)) {
         const [value, error] = this.getCellValue(token);
         if (error !== "") {
-          throw new Error(error);
+          this._errorMessage = error;
+          break;
         }
-        numStack.push(value);
+        numbers.push(value);
       } 
+
       // if the token is an operator, apply the operator to the top two numbers in the stack
       else if (this.isOperator(token)) {
         while (
           operators.length > 0 &&
           this.hasHigherPrecedence(operators[operators.length - 1], token)
         ) {
-          this.applyOperator(numStack, operators.pop() as string);
+          this.applyOperator(numbers, operators.pop() as string);
         }
         operators.push(token);
       } 
+
       // if the token is a left parenthesis, push it to the operator stack
       else if (token === "(") {
         operators.push(token);
       } 
+
       // if the token is a right parenthesis, apply the operators until the left parenthesis is found
       else if (token === ")") {
         // while the operator stack is not empty and the top of the stack is not a left parenthesis
         while (operators.length > 0 && operators[operators.length - 1] !== "(") {
-          this.applyOperator(numStack, operators.pop() as string);
+          this.applyOperator(numbers, operators.pop() as string);
         }
         // if the operator stack is empty or the top of the stack is not a left parenthesis, throw an error
-        if (operators.length === 0 || operators.pop() !== "(") {
-          throw new Error(ErrorMessages.missingParentheses);
+        if (operators.length === 0) {
+          this._errorMessage = ErrorMessages.missingParentheses;
+        }
+        else {
+          operators.pop(); // pop the left parenthesis
         }
       }
     }
 
     while (operators.length > 0) {
-      const operator = operators.pop() as string;
-      if (operator === "(") {
-        throw new Error(ErrorMessages.missingParentheses);
-      } 
-      else if (operator === "/") {
-        const operand2 = numStack.pop() as number;
-        const operand1 = numStack.pop() as number;
-        if (operand2 === 0) {
-          throw new Error(ErrorMessages.divideByZero);
-        }
-        else {
-          const result = operand1 / operand2;
-          numStack.push(result);
-        }
-      } 
-      else {
-        this.applyOperator(numStack, operator);
-      }
+      this.applyOperator(numbers, operators.pop() as string);
     }
 
-    if (numStack.length !== 1) {
-      throw new Error(ErrorMessages.invalidFormula);
+    if (numbers.length === 1) {
+      this._result = numbers[0];
     }
-
-    // return the result
-    return numStack[0];
+    else if (numbers.length === 0 && this._errorMessage === "") {
+      this._result = 0;
+      this._errorMessage = ErrorMessages.invalidFormula;
+    }
   }
 
   // check if the token is an operator
@@ -160,9 +140,15 @@ export class FormulaEvaluator {
 
   // apply the operator to the top two numbers in the stack
   private applyOperator(stack: number[], operator: string): void {
+    if (stack.length === 0) {
+      this._errorMessage = ErrorMessages.invalidFormula;
+      return;
+    }
     // if the stack has less than two numbers, throw an error
     if (stack.length < 2) {
       this._errorMessage = ErrorMessages.invalidFormula;
+      this._result = stack.pop() as number;
+      // stack.pop(); // pop the last number from the stack
       return;
     }
     // pop the top two numbers from the stack
@@ -182,6 +168,9 @@ export class FormulaEvaluator {
         break;
       case "/":
         stack.push(operand1 / operand2);
+        if (operand2 === 0) {
+          this._errorMessage = ErrorMessages.divideByZero;
+        }
         break;
       default:
         throw new Error(ErrorMessages.invalidOperator);
