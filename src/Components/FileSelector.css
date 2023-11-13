@@ -1,0 +1,20 @@
+label {
+    margin-right: 10px;
+    font-family: "Gill Sans", sans-serif; 
+    font-size: 16px;
+}
+
+select {
+    padding: 5px;
+    border: 1px solid #201f1f;
+    border-radius: 4px;
+}
+
+select:hover {
+    border-color: #555;
+}
+
+
+option {
+    padding: 5px;
+}
