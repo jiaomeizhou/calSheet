@@ -36,11 +36,40 @@ function KeyPad({ onButtonClick, onCommandButtonClick, currentlyEditing }: KeyPa
       <div className="buttons-row">
 
         <Button
+          text="+/-"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-postfix-operator"
+          dataTestId="+/--button"
+        />
+        <Button
+          text="1/x"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-postfix-operator"
+          dataTestId="1/x-button"
+        />
+        <Button
+          text="sqr"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-postfix-operator"
+          dataTestId="x^2-button"
+        />
+
+        <Button
           text="7"
           isDigit={true}
           onClick={onButtonClick}
           className="button-number"
           dataTestId="seven-button"
+        />
+        <Button
+          text="e"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-number"
+          dataTestId="e-button"
         />
         <Button
           text="8"
@@ -74,11 +103,39 @@ function KeyPad({ onButtonClick, onCommandButtonClick, currentlyEditing }: KeyPa
 
       <div className="buttons-row">
         <Button
+          text="sin"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-postfix-operator"
+          dataTestId="sin-button"
+        />
+        <Button
+          text="asin"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-postfix-operator"
+          dataTestId="asin-button"
+        />
+        <Button
+          text="cube"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-postfix-operator"
+          dataTestId="x^3-button"
+        />
+        <Button
           text="4"
           isDigit={true}
           onClick={onButtonClick}
           className="button-number"
           dataTestId="four-button"
+        />
+        <Button
+          text="Pi"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-number"
+          dataTestId="Pi-button"
         />
         <Button
           text="5"
@@ -112,11 +169,39 @@ function KeyPad({ onButtonClick, onCommandButtonClick, currentlyEditing }: KeyPa
 
       <div className="buttons-row">
         <Button
+          text="cos"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-postfix-operator"
+          dataTestId="cos-button"
+        />
+        <Button
+          text="acos"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-postfix-operator"
+          dataTestId="acos-button"
+        />
+        <Button
+          text="sqrt"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-postfix-operator"
+          dataTestId="sqrt-button"
+        />
+        <Button
           text="1"
           isDigit={true}
           onClick={onButtonClick}
           className="button-number"
           dataTestId="one-button"
+        />
+        <Button
+          text="Rand"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-number"
+          dataTestId="rand-button"
         />
         <Button
           text="2"
@@ -151,10 +236,31 @@ function KeyPad({ onButtonClick, onCommandButtonClick, currentlyEditing }: KeyPa
 
       <div className="buttons-row">
         <Button
+          text="tan"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-postfix-operator"
+          dataTestId="tan-button"
+        />
+        <Button
+          text="atan"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-postfix-operator"
+          dataTestId="atan-button"
+        />
+        <Button
+          text="cbrt"
+          isDigit={false}
+          onClick={onButtonClick}
+          className="button-postfix-operator"
+          dataTestId="cuberoot-button"
+        />
+        <Button
           text="0"
           isDigit={true}
           onClick={onButtonClick}
-          className="button-number"
+          className="button-number-wide"
           dataTestId="zero-button"
         />
         <Button

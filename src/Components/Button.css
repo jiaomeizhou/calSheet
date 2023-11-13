@@ -11,8 +11,34 @@
   height: 60px;
 }
 
+.button-number-wide {
+  background-color: #514caf;
+  border: 5px solid #000000;
+  color: white;
+  padding: 5px 5px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: large;
+  width: 160px;
+  height: 60px;
+}
+
 .button-operator {
   background-color: #512426;
+  border: 5px solid #000000;
+  color: white;
+  padding: 5px 5px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: large;
+  width: 80px;
+  height: 60px;
+}
+
+.button-postfix-operator {
+  background-color: #363333;
   border: 5px solid #000000;
   color: white;
   padding: 5px 5px;
