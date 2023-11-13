@@ -342,6 +342,29 @@ class SpreadSheetClient {
 
     }
 
+        /**
+     * get all the VALID documents from the server
+     * 
+     * @returns vaild file names list.
+     * this is client side so we use fetch
+     */
+        public async getDocuments(): Promise<string[]> {
+            const fetchURL = `${this._baseURL}/documents`;
+            let fileNameOptions : string[] = [];
+            const response = await fetch(fetchURL);
+            fileNameOptions = await response.json();
+    
+            // fetch(fetchURL)
+            //     .then(response => {
+    
+            //         return response.json() as Promise<string[]>;
+            //     }).then(names => {
+            //         fileNameOptions = names;
+            //     })
+            return fileNameOptions;
+        }
+    
+
 
     private _updateDocument(document: DocumentTransport): void {
         const formula = document.formula;
