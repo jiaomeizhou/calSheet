@@ -8,7 +8,7 @@
 //   private machine: Machine;
 //   private errorOccured: boolean = false;
 
-import { FormulaEvaluator } from "../../Engine/FormulaEvaluator";
+import FormulaEvaluator from "../../Engine/FormulaEvaluator"
 import SheetMemory from "../../Engine/SheetMemory";
 import Cell from "../../Engine/Cell";
 import { ErrorMessages } from "../../Engine/GlobalDefinitions";
