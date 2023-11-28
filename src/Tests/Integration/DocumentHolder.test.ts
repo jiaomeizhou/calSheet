@@ -3,13 +3,17 @@ import path from 'path';
 
 import { DocumentHolder } from '../../Engine/DocumentHolder';
 
-const documentTestPath = 'testDocuments';
+let documentHolder: DocumentHolder;
+
+const documentTestPath = 'documents';
 const documentTestPathFull = path.join(__dirname, '..', '..', '..', documentTestPath);
+
 beforeAll(() => {
     // remove the test documents folder if it exists
     if (fs.existsSync(documentTestPathFull)) {
         fs.rmdirSync(documentTestPathFull, { recursive: true });
     }
+    documentHolder = new DocumentHolder("documents");
 
 });
 
@@ -65,6 +69,56 @@ describe('DocumentHolder', () => {
         });
     });
 
+    it('should delete files that start with xxx', () => {
+        // Create some test files
+        // create the path for each file
+        const file1 = path.join(documentTestPathFull, 'xxx1.json');
+        const file2 = path.join(documentTestPathFull, 'xxx2.json');
+
+        fs.writeFileSync(file1, '{"columns":2,"rows":2,"cells":{"A1":{"formula":[],"value":0,"error":"#EMPTY!"},"A2":{"formula":[],"value":0,"error":"#EMPTY!"},"B1":{"formula":[],"value":0,"error":"#EMPTY!"},"B2":{"formula":[],"value":0,"error":"#EMPTY!"}}}');
+        fs.writeFileSync(file2, '{"columns":2,"rows":2,"cells":{"A1":{"formula":[],"value":0,"error":"#EMPTY!"},"A2":{"formula":[],"value":0,"error":"#EMPTY!"},"B1":{"formula":[],"value":0,"error":"#EMPTY!"},"B2":{"formula":[],"value":0,"error":"#EMPTY!"}}}');
+
+
+        // Call the _cleanFiles function
+        documentHolder['_cleanFiles']();
+
+        // Check that the xxx files were deleted
+        expect(fs.existsSync(file1)).toBe(false);
+        expect(fs.existsSync(file2)).toBe(false);
+
+
+    });
+
+    it('should not add a new document if the document already exists', () => {
+        const sheetTestName = 'test' + 3.55
+        const userName = 'testUser';
+        const documentHolder = new DocumentHolder(documentTestPath);
+        let result = documentHolder.createDocument(sheetTestName, 2, 2, userName);
+        expect(result).toBeTruthy();
+        result = documentHolder.createDocument(sheetTestName, 2, 2, userName);
+        expect(result).toBeFalsy();
+    });
+
+
+
+    it(' add a new controller when a new document is created', () => {
+        const sheetTestName = 'NewFiletest' + 3.1
+        const userName = 'testUser';
+        const documentHolder = new DocumentHolder(documentTestPath);
+        const file1 = path.join(documentTestPathFull, sheetTestName + '.json');
+        fs.writeFileSync(file1, '{"columns":2,"rows":2,"cells":{"A1":{"formula":[],"value":0,"error":"#EMPTY!"},"A2":{"formula":[],"value":0,"error":"#EMPTY!"},"B1":{"formula":[],"value":0,"error":"#EMPTY!"},"B2":{"formula":[],"value":0,"error":"#EMPTY!"}}}');
+
+
+        // get the controller
+        const names = documentHolder.getDocumentNames();
+        expect(names).toContain(sheetTestName);
+        const controller = documentHolder['_documents'].get(sheetTestName);
+        expect(controller).toBeDefined();
+
+        fs.unlinkSync(file1); // get rid of the file now
+
+    });
+
     describe('accessing a document', () => {
         describe('Formula Editing', () => {
             it('should add a token to the current formula', () => {
@@ -116,9 +170,9 @@ describe('DocumentHolder', () => {
                 const documentHolder = new DocumentHolder(documentTestPath);
 
                 const userName = 'testUser';
-
-                const accessOK = documentHolder.requestEditAccess(sheetTestName, 'A1', userName);
                 let result = documentHolder.createDocument(sheetTestName, 2, 2, userName);
+                const accessOK = documentHolder.requestEditAccess(sheetTestName, 'A1', userName);
+
 
                 const documentJSON = documentHolder.addCell(sheetTestName, 'A1', userName);
 
@@ -319,6 +373,47 @@ describe('DocumentHolder', () => {
 
             });
 
+            it('should not clear the formula if not owner', () => {
+                const sheetTestName = 'test' + 10.1
+                const userName = 'testUser';
+                const otherUserName = 'otherUser';
+                const documentHolder = new DocumentHolder(documentTestPath);
+                let result = documentHolder.createDocument(sheetTestName, 2, 2, userName);
+
+                let accessOK = documentHolder.requestEditAccess(sheetTestName, 'A1', userName);
+
+
+                documentHolder.addCell(sheetTestName, 'A2', userName);
+                const documentJSON = documentHolder.addToken(sheetTestName, '+', userName);
+
+                // unpack the JSON
+                const document = JSON.parse(documentJSON);
+
+                // get the cell A1 from the cells
+                const cell = document.cells["A1"]
+                // get the formula from the cell
+                const formula = cell.formula;
+                // the formula should be ["A2"] and the error "#REF!"
+                expect(formula).toEqual(["A2", "+"]);
+
+
+                let documentJSON2 = documentHolder.clearFormula(sheetTestName, otherUserName);
+
+
+
+                // unpack the JSON
+                const document2 = JSON.parse(documentJSON2);
+
+                // get the cell A1 from the cells
+                const cell2 = document2.cells["A1"]
+                // get the formula from the cell
+                const formula2 = cell2.formula;
+
+                // the formula should be [] and the error "#EMPTY!"
+                expect(formula2).toEqual(["A2", "+"]);
+
+            });
+
             it('should return the FormulaString for the controler', () => {
                 const sheetTestName = 'test' + 11
                 const userName = 'testUser';
@@ -369,31 +464,70 @@ describe('DocumentHolder', () => {
 
             });
 
-            it('should return edit status true it is set', () => {
-                const sheetTestName = 'test' + 13
+
+            it('should return true if the user has edit access then they request view Access', () => {
+                const sheetTestName = 'test' + 14
                 const userName = 'testUser';
                 const documentHolder = new DocumentHolder(documentTestPath);
                 let result = documentHolder.createDocument(sheetTestName, 2, 2, userName);
 
-
                 let accessOK = documentHolder.requestEditAccess(sheetTestName, 'A2', userName);
 
-                documentHolder.setWorkingCellByLabel(sheetTestName, 'A2');
-                documentHolder.addToken(sheetTestName, '2', userName);
+                const viewAccess = documentHolder.requestViewAccess(sheetTestName, 'A2', userName);
 
-
-                const editStatus = documentHolder.getEditStatus(sheetTestName, userName);
-
-                expect(editStatus).toBeTruthy();
-
-                const editStatusString = documentHolder.getEditStatusString(sheetTestName, userName);
-
-                expect(editStatusString).toEqual("editing: A2");
+                expect(viewAccess).toBeTruthy();
 
             });
 
+            it('should return false if another user has edit access then they request view Access', () => {
+                const sheetTestName = 'test' + 15
+                const userName = 'testUser';
+                const otherUserName = 'otherUser';
+                const documentHolder = new DocumentHolder(documentTestPath);
+                let result = documentHolder.createDocument(sheetTestName, 2, 2, otherUserName);
+
+                let accessOK = documentHolder.requestEditAccess(sheetTestName, 'A2', otherUserName);
+
+                const editAccess = documentHolder.requestEditAccess(sheetTestName, 'A2', userName);
+
+                expect(editAccess).toBeFalsy();
+
+            });
+
+            it('should return true if editing one cell then asking to edit another', () => {
+                const sheetTestName = 'test' + 16
+                const userName = 'testUser';
+
+                const documentHolder = new DocumentHolder(documentTestPath);
+                let result = documentHolder.createDocument(sheetTestName, 4, 4, userName);
+
+                let accessOK = documentHolder.requestEditAccess(sheetTestName, 'A2', userName);
+
+                const editAccess = documentHolder.requestEditAccess(sheetTestName, 'A3', userName);
+
+                expect(editAccess).toBeTruthy();
+
+            });
+
+
+            it('should return true if the user has edit access then they request edit Access', () => {
+                const sheetTestName = 'test' + 17
+                const userName = 'testUser';
+                const documentHolder = new DocumentHolder(documentTestPath);
+                let result = documentHolder.createDocument(sheetTestName, 2, 2, userName);
+
+                let accessOK = documentHolder.requestEditAccess(sheetTestName, 'A2', userName);
+
+                const viewAccess = documentHolder.requestEditAccess(sheetTestName, 'A2', userName);
+
+                expect(viewAccess).toBeTruthy();
+
+            });
+
+
+
             it('should return the formula string for the selected cell even if it cannot edit', () => {
-                const sheetTestName = 'test' + 14
+                const sheetTestName = 'test' + 18
                 const userName = 'testUser';
                 const documentHolder = new DocumentHolder(documentTestPath);
                 let result = documentHolder.createDocument(sheetTestName, 2, 2, userName);
@@ -411,6 +545,22 @@ describe('DocumentHolder', () => {
                 documentHolder.addToken(sheetTestName, '+', otherUserName);
                 const formulaString = documentHolder.getFormulaString(sheetTestName, otherUserName);
                 expect(formulaString).toEqual("2 + 2");
+
+
+            });
+
+            it('Should not add a cell reference if the user is not editing', () => {
+                const sheetTestName = 'test' + 19
+                const userName = 'testUser';
+                const documentHolder = new DocumentHolder(documentTestPath);
+                let result = documentHolder.createDocument(sheetTestName, 2, 2, userName);
+
+                let accessOK = documentHolder.requestViewAccess(sheetTestName, 'A1', userName);
+                documentHolder.addCell(sheetTestName, 'A2', userName)
+
+
+                const formulaString = documentHolder.getFormulaString(sheetTestName, userName);
+                expect(formulaString).toEqual("");
 
 
             });

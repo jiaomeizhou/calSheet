@@ -3,10 +3,12 @@ import Formula from "./Formula";
 import Status from "./Status";
 import KeyPad from "./KeyPad";
 import SpreadSheetClient from "../Engine/SpreadSheetClient";
+import getCellsBeingEdited from "../Engine/SpreadSheetController";
 import SheetHolder from "./SheetHolder";
 import FileSelector from "./FileSelector";
 
 import { ButtonNames } from "../Engine/GlobalDefinitions";
+import ServerSelector from "./ServerSelector";
 
 
 interface SpreadSheetProps {
@@ -29,8 +31,9 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
   const [statusString, setStatusString] = useState(spreadSheetClient.getEditStatusString());
   const [currentCell, setCurrentCell] = useState(spreadSheetClient.getWorkingCellLabel());
   const [currentlyEditing, setCurrentlyEditing] = useState(spreadSheetClient.getEditStatus());
-  const [userName, setUserName] = useState(window.sessionStorage.getItem('userName') || "Unknown");
+  const [userName, setUserName] = useState(window.sessionStorage.getItem('userName') || "");
   const [fileName, setFileName] = useState(documentName);
+  const [serverSelected, setServerSelected] = useState("localhost");
 
 
   function updateDisplayValues(): void {
@@ -62,16 +65,24 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
         id="inputName"
       />
       <button onClick={() => {
-        // get the text from the input
-        let inputElement: HTMLInputElement = document.getElementById('inputName') as HTMLInputElement;
-        let userName = inputElement!.value;
-        window.sessionStorage.setItem('userName', userName);
-        // set the user name
-        setUserName(userName);
-        spreadSheetClient.userName = userName;
-      }} >Login</button>
+          // get the text from the input
+          let inputElement: HTMLInputElement = document.getElementById('inputName') as HTMLInputElement;
+          let userName = inputElement!.value;
+          window.sessionStorage.setItem('userName', userName);
+          // set the user name
+          setUserName(userName);
+          spreadSheetClient.userName = userName;
+        }}>Login</button>
     </div>
 
+  }
+
+  function checkUserName(): boolean {
+    if (userName === "") {
+      alert("Please enter a user name");
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -87,13 +98,14 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
    * the other buttons do require asynchronous processing and so the function is marked async
    */
   async function onCommandButtonClick(text: string): Promise<void> {
-    // Check if the user has entered a name before performing actions
-    if (spreadSheetClient.userName === "" || spreadSheetClient.userName === "Unknown") {
-      window.alert('Please enter your name!');
+
+    if (!checkUserName()) {
       return;
     }
 
     switch (text) {
+
+
       case ButtonNames.edit_toggle:
         if (currentlyEditing) {
           spreadSheetClient.setEditStatus(false);
@@ -125,12 +137,9 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
    * 
    * */
   function onButtonClick(event: React.MouseEvent<HTMLButtonElement>): void {
-    // Check if the user has entered a name before performing actions
-    if (spreadSheetClient.userName === "" || spreadSheetClient.userName === "Unknown") {
-      window.alert('Please enter your name!');
+    if (!checkUserName()) {
       return;
     }
-
     const text = event.currentTarget.textContent;
     let trueText = text ? text : "";
     spreadSheetClient.setEditStatus(true);
@@ -138,6 +147,12 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
 
     updateDisplayValues();
 
+  }
+
+  // this is to help with development,  it allows us to select the server
+  function serverSelector(buttonName: string) {
+    setServerSelected(buttonName);
+    spreadSheetClient.setServerSelector(buttonName);
   }
 
 
@@ -150,12 +165,11 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
    * If the edit status is false then it will ask the machine to update the current formula.
    */
   function onCellClick(event: React.MouseEvent<HTMLButtonElement>): void {
-    // Check if the user has entered a name before performing actions
-    if (spreadSheetClient.userName === "" || spreadSheetClient.userName === "Unknown") {
-      window.alert('Please enter your name!');
+
+    if (userName === "") {
+      alert("Please enter a user name");
       return;
     }
-
     const cellLabel = event.currentTarget.getAttribute("cell-label");
     // calculate the current row and column of the clicked on cell
 
@@ -188,6 +202,10 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
     updateDisplayValues();
   }
 
+  async function getCellsBeingEditedFromServer() : Promise<Map<string, string>> {
+    return spreadSheetClient.getCellsBeingEdited(fileName);
+  }
+
   return (
     <div>
       <FileSelector fetchFiles={getFiles} onFileSelect={selectFiles} userName={userName} />
@@ -196,13 +214,12 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
       {<SheetHolder cellsValues={cells}
         onClick={onCellClick}
         currentCell={currentCell}
-        currentlyEditing={currentlyEditing}
-        currentUser={userName}></SheetHolder>}
+        getCellsBeingEdited={getCellsBeingEditedFromServer} ></SheetHolder>}
       <KeyPad onButtonClick={onButtonClick}
         onCommandButtonClick={onCommandButtonClick}
         currentlyEditing={currentlyEditing}></KeyPad>
       {getUserLogin()}
-
+      <ServerSelector serverSelector={serverSelector} serverSelected={serverSelected} />
     </div>
   )
 };

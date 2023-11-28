@@ -11,24 +11,36 @@
 import { DocumentTransport, CellTransport, CellTransportMap, ErrorMessages } from '../Engine/GlobalDefinitions';
 import { Cell } from '../Engine/Cell';
 
-import { PortsGlobal } from '../PortsGlobal';
+import { PortsGlobal, LOCAL_SERVER_URL, RENDER_SERVER_URL } from '../ServerDataDefinitions';
 
 
 
 class SpreadSheetClient {
+
+    // get the environment variable SERVER_LOCAL 
+    // if it is true then use the local server
+    // otherwise use the render server
+
+
+
     private _serverPort: number = PortsGlobal.serverPort;
-    private _baseURL: string = `http://localhost:${this._serverPort}`;
+    private _baseURL: string = `${LOCAL_SERVER_URL}:${this._serverPort}`;
     private _userName: string = 'juancho';
     private _documentName: string = 'test';
     private _document: DocumentTransport;
+    private _server: string = '';
 
     constructor(documentName: string, userName: string) {
         this._userName = userName;
         this._documentName = documentName;
-        this.getDocument(this._documentName, this._userName);
+
+        this.setServerSelector('localhost');  // change this to renderhost if you want to default to renderhost
 
         this._document = this._initializeBlankDocument();
         this._timedFetch();
+
+        console.log(`process.env = ${JSON.stringify(process.env)}`);
+
     }
 
     private _initializeBlankDocument(): DocumentTransport {
@@ -54,6 +66,8 @@ class SpreadSheetClient {
         }
         return document;
     }
+
+
     /**
      * 
      * Every .1 seconds, fetch the document from the server
@@ -186,18 +200,22 @@ class SpreadSheetClient {
      */
     public setEditStatus(isEditing: boolean): void {
 
-        // request edit statut sof the current cell
-        let requestEditViewURL = `${this._baseURL}/document/cell/view/${this._documentName}/${this._document.currentCell}`;
+        // request edit status of the current cell
+        const body = {
+            "userName": this._userName,
+            "cell": this._document.currentCell
+        };
+        let requestEditViewURL = `${this._baseURL}/document/cell/view/${this._documentName}`;
         if (isEditing) {
-            requestEditViewURL = `${this._baseURL}/document/cell/edit/${this._documentName}/${this._document.currentCell}`;
+            requestEditViewURL = `${this._baseURL}/document/cell/edit/${this._documentName}`;
         }
-        console.log(this._userName);
+
         fetch(requestEditViewURL, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ "userName": this._userName })
+            body: JSON.stringify(body)
         })
             .then(response => {
                 return response.json() as Promise<DocumentTransport>;
@@ -209,16 +227,19 @@ class SpreadSheetClient {
 
 
     public addToken(token: string): void {
-        if (token === "/") {
-            token = "%2F";
-        }
-        const requestAddTokenURL = `${this._baseURL}/document/addtoken/${this._documentName}/${token}`;
+
+        const body = {
+            "userName": this._userName,
+            "token": token
+        };
+
+        const requestAddTokenURL = `${this._baseURL}/document/addtoken/${this._documentName}`;
         fetch(requestAddTokenURL, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ "userName": this._userName })
+            body: JSON.stringify(body)
         })
             .then(response => {
 
@@ -230,14 +251,19 @@ class SpreadSheetClient {
     }
 
     public addCell(cell: string): void {
-        const requestAddCellURL = `${this._baseURL}/document/addcell/${this._documentName}/${cell}`;
+        const requestAddCellURL = `${this._baseURL}/document/addcell/${this._documentName}`;
+
+        const body = {
+            "userName": this._userName,
+            "cell": cell
+        };
 
         fetch(requestAddCellURL, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ "userName": this._userName })
+            body: JSON.stringify(body)
         })
             .then(response => {
                 return response.json() as Promise<DocumentTransport>;
@@ -266,9 +292,29 @@ class SpreadSheetClient {
     }
 
     public requestViewByLabel(label: string): void {
-        const requestViewURL = `${this._baseURL}/document/cell/view/${this._documentName}/${label}`;
+        const requestViewURL = `${this._baseURL}/document/cell/view/${this._documentName}`;
         console.log(this._userName);
+        const body = {
+            "userName": this._userName,
+            "cell": label
+        };
         fetch(requestViewURL, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        })
+            .then(response => {
+                return response.json() as Promise<DocumentTransport>;
+            }).then((document: DocumentTransport) => {
+                this._updateDocument(document);
+            });
+    }
+
+    public clearFormula(): void {
+        const requestClearFormulaURL = `${this._baseURL}/document/clear/formula/${this._documentName}`;
+        fetch(requestClearFormulaURL, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -280,36 +326,6 @@ class SpreadSheetClient {
             }).then((document: DocumentTransport) => {
                 this._updateDocument(document);
             });
-    }
-
-    public clearFormula(): void {
-
-        const requestClearFormulaURL = `${this._baseURL}/document/clear/formula/${this._documentName}`;
-        
-        fetch(requestClearFormulaURL, {
-        
-        method: 'PUT',
-        
-        headers: {
-        
-        'Content-Type': 'application/json'
-        
-         },
-        
-        body: JSON.stringify({ "userName": this._userName })
-        
-         })
-        
-         .then(response => {
-        
-        return response.json() as Promise<DocumentTransport>;
-        
-         }).then((document: DocumentTransport) => {
-        
-        this._updateDocument(document);
-        
-         });
-        
     }
 
 
@@ -342,27 +358,41 @@ class SpreadSheetClient {
 
     }
 
-        /**
+    /**
      * get all the VALID documents from the server
      * 
      * @returns vaild file names list.
      * this is client side so we use fetch
      */
-        public async getDocuments(): Promise<string[]> {
-            const fetchURL = `${this._baseURL}/documents`;
-            let fileNameOptions : string[] = [];
-            const response = await fetch(fetchURL);
-            fileNameOptions = await response.json();
-    
-            // fetch(fetchURL)
-            //     .then(response => {
-    
-            //         return response.json() as Promise<string[]>;
-            //     }).then(names => {
-            //         fileNameOptions = names;
-            //     })
-            return fileNameOptions;
-        }
+    public async getDocuments(): Promise<string[]> {
+        const fetchURL = `${this._baseURL}/documents`;
+        let fileNameOptions : string[] = [];
+        const response = await fetch(fetchURL);
+        fileNameOptions = await response.json();
+
+        // fetch(fetchURL)
+        //     .then(response => {
+
+        //         return response.json() as Promise<string[]>;
+        //     }).then(names => {
+        //         fileNameOptions = names;
+        //     })
+        return fileNameOptions;
+    }
+
+    /**
+     * get all cells being edited from the server
+     * 
+     * @returns Map<string, string>, a cellBeingEdited-user map.
+     */
+    public async getCellsBeingEdited(name: string): Promise<Map<string, string>> {
+        const fetchURL = `${this._baseURL}/documents/cellsBeingEdited/${name}`;
+        const response = await fetch(fetchURL);
+        const data = await response.json();
+        const cellsBeingEdited : Map<string, string> = new Map<string, string>(data);
+        return cellsBeingEdited;
+    }
+
     
 
 
@@ -404,8 +434,24 @@ class SpreadSheetClient {
 
     }
 
-}
+    /**
+     * Server selector for the fetch
+     */
+    setServerSelector(server: string): void {
+        if (server === this._server) {
+            return;
+        }
+        if (server === 'localhost') {
+            this._baseURL = `${LOCAL_SERVER_URL}:${this._serverPort}`;
+        } else {
+            this._baseURL = RENDER_SERVER_URL;
+        }
 
+        this.getDocument(this._documentName, this._userName);
+        this._server = server;
+
+    }
+}
 
 
 export default SpreadSheetClient;

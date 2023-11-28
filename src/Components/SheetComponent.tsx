@@ -1,8 +1,9 @@
-import React from "react";
+import React, {useEffect, useState} from "react";
 
 import Cell from "../Engine/Cell";
 
 import "./SheetComponent.css";
+import { getMutableClone } from "typescript";
 
 // a component that will render a two dimensional array of cells
 // the cells will be rendered in a table
@@ -13,15 +14,20 @@ interface SheetComponentProps {
   cellsValues: Array<Array<string>>;
   onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
   currentCell: string;
-  currentlyEditing: boolean;
-  currentUser: string;
+  getCellsBeingEdited: () => Promise<Map<string, string>>;
 } // interface SheetComponentProps
 
 
 
 
-function SheetComponent({ cellsValues, onClick, currentCell, currentlyEditing, currentUser}: SheetComponentProps) {
+function SheetComponent({ cellsValues, onClick, currentCell, getCellsBeingEdited}: SheetComponentProps) {
 
+  const [cellsBeingEdited, setCellsBeingEdited] = useState<Map<string, string>>(new Map<string, string>());
+
+  useEffect(() => {
+      getCellsBeingEdited().then(setCellsBeingEdited);
+      //setFiles(f);
+  }, [getCellsBeingEdited]);
   /**
    * 
    * @param cell 
@@ -36,7 +42,7 @@ function SheetComponent({ cellsValues, onClick, currentCell, currentlyEditing, c
    * otherwise the cell will be rendered with the class name "cell"
    */
   function getCellClass(cell: string) {
-    if (cell === currentCell && currentlyEditing) {
+    if (cellsBeingEdited.has(cell)) {
       return "cell-editing";
     }
     if (cell === currentCell) {
@@ -46,11 +52,11 @@ function SheetComponent({ cellsValues, onClick, currentCell, currentlyEditing, c
   }
 
   function checkEditorInfo(cell: string) {
+    const a = cell;
     if (getCellClass(cell) === "cell-editing") {
-      return (<div className="editor-info">{currentUser}</div>);
+      return (<div className="editor-info">{cellsBeingEdited.get(cell)}</div>);
     }
   }
-
 
   return (
     <table className="table">
@@ -69,7 +75,7 @@ function SheetComponent({ cellsValues, onClick, currentCell, currentlyEditing, c
             <td> {Cell.rowNumberToName(rowIndex)}</td>
             {row.map((cell, colIndex) => (
               <td key={colIndex}>
-              {checkEditorInfo(Cell.columnRowToCell(colIndex, rowIndex))}
+                {checkEditorInfo(Cell.columnRowToCell(colIndex, rowIndex))}
                 <button
                   onClick={onClick}
                   value={cell}
@@ -79,7 +85,6 @@ function SheetComponent({ cellsValues, onClick, currentCell, currentlyEditing, c
                 >
                   {cell}
                 </button>
-
               </td>
             ))}
           </tr>
