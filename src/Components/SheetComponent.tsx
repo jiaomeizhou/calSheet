@@ -52,8 +52,7 @@ function SheetComponent({ cellsValues, onClick, currentCell, getCellsBeingEdited
   }
 
   function checkEditorInfo(cell: string) {
-    const a = cell;
-    if (getCellClass(cell) === "cell-editing") {
+    if (cellsBeingEdited.has(cell)) {
       return (<div className="editor-info">{cellsBeingEdited.get(cell)}</div>);
     }
   }
