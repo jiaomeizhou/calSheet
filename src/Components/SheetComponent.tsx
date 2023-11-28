@@ -14,12 +14,13 @@ interface SheetComponentProps {
   onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
   currentCell: string;
   currentlyEditing: boolean;
+  currentUser: string;
 } // interface SheetComponentProps
 
 
 
 
-function SheetComponent({ cellsValues, onClick, currentCell, currentlyEditing }: SheetComponentProps) {
+function SheetComponent({ cellsValues, onClick, currentCell, currentlyEditing, currentUser}: SheetComponentProps) {
 
   /**
    * 
@@ -44,6 +45,13 @@ function SheetComponent({ cellsValues, onClick, currentCell, currentlyEditing }:
     return "cell";
   }
 
+  function checkEditorInfo(cell: string) {
+    if (getCellClass(cell) === "cell-editing") {
+      return (<div className="editor-info">{currentUser}</div>);
+    }
+  }
+
+
   return (
     <table className="table">
       <tbody>
@@ -61,6 +69,7 @@ function SheetComponent({ cellsValues, onClick, currentCell, currentlyEditing }:
             <td> {Cell.rowNumberToName(rowIndex)}</td>
             {row.map((cell, colIndex) => (
               <td key={colIndex}>
+              {checkEditorInfo(Cell.columnRowToCell(colIndex, rowIndex))}
                 <button
                   onClick={onClick}
                   value={cell}
