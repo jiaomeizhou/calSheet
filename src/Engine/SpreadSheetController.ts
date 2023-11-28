@@ -78,22 +78,32 @@ export class SpreadSheetController {
   requestViewAccess(user: string, cellLabel: string) {
     // if the user is not in the list of users then we will add them with an unasigned cell
     let userData: ContributingUser;
+    let nextCell : string = cellLabel;
 
     // check to see if the user is editing another cell.
     if (this._contributingUsers.has(user)) {
-      const userData = this._contributingUsers.get(user);
-      if (userData!.cellLabel !== '' && userData!.cellLabel !== cellLabel) {
-        this._cellsBeingEdited.delete(userData!.cellLabel);
+      const userData: ContributingUser = this._contributingUsers.get(user)!;
+      const currentCell: string = userData.cellLabel;
+      if (userData.cellLabel !== '' && userData.cellLabel !== cellLabel) {
+        if (this._cellsBeingEdited.has(cellLabel) && 
+        this._cellsBeingEdited.get(cellLabel) === user) {
+          this._cellsBeingEdited.delete(cellLabel); 
+        }
+        else if (this._cellsBeingEdited.has(cellLabel) && 
+        this._cellsBeingEdited.get(cellLabel) !== user) {
+          nextCell = currentCell;
+        }
+
       }
       this.releaseEditAccess(user);
     }
 
     // if it does not exist them make and give view access
     if (!this._contributingUsers.has(user)) {
-      let userData = new ContributingUser(cellLabel)
+      let userData = new ContributingUser(nextCell)
       userData.isEditing = false;
       this._contributingUsers.set(user, userData);
-      userData.formulaBuilder.setFormula(this._memory.getCellByLabel(cellLabel).getFormula());
+      userData.formulaBuilder.setFormula(this._memory.getCellByLabel(nextCell).getFormula());
       return;
     }
   }
