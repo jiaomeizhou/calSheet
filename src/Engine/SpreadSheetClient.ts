@@ -218,6 +218,9 @@ class SpreadSheetClient {
             body: JSON.stringify(body)
         })
             .then(response => {
+                if (response.status === 400) {
+                    alert('cell is being edited by another user');
+                }
                 return response.json() as Promise<DocumentTransport>;
             }).then((document: DocumentTransport) => {
                 this._updateDocument(document);
